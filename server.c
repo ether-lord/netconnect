@@ -1,10 +1,15 @@
-#include <stdio.h>      // printf
-#include <netinet/in.h> // sockaddr_in, INADDR_ANY
-#include <sys/socket.h> // socket, bind, listen, accept, AF_INET, SOCK_STREAM
-#include <sys/types.h>  // htonl, htons, socklen_t
-#include <unistd.h>     // read, write, close
+#include <stdio.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h> 
+#include <unistd.h>  
 
 #define MAX_MESSAGE_SIZE 256
+#define PORT 8080
+#define DISCONNECT_CMD "disconnect\n"
+
+const char* EXIT_MESSAGE = "DISCONNECTED\n";
 
 int main(void) {
     struct sockaddr_in server_sockaddr_in;
@@ -12,7 +17,7 @@ int main(void) {
     server_sockaddr_in.sin_family = AF_INET;
     server_sockaddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
     
-    const int port = 8082;
+    const int port = PORT;
     server_sockaddr_in.sin_port = htons(port);
 
     int socket_file_descriptor = socket(AF_INET, SOCK_STREAM, 0);
@@ -31,10 +36,17 @@ int main(void) {
         read(connection_file_descriptor, buffer, sizeof(buffer));
         printf("%s", buffer);
 
+        if (strcmp(buffer, DISCONNECT_CMD) == 0) {
+            write(connection_file_descriptor, EXIT_MESSAGE, sizeof(EXIT_MESSAGE));
+            shutdown(socket_file_descriptor, SHUT_WR);
+            break;
+        }
+
         char status = 0;
         write(connection_file_descriptor, &status, 1);
     }
     
+
     close(socket_file_descriptor);
 
     return 0;
